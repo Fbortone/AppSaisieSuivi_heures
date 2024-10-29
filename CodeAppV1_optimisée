@@ -1,0 +1,278 @@
+import React, { useState } from 'react'; 
+import { Menu, Calendar, Plus, X, Search, ChevronRight } from 'lucide-react'; 
+import { Button } from "@/components/ui/button"; 
+import { Input } from "@/components/ui/input"; 
+import { Switch } from "@/components/ui/switch"; 
+import { Dialog, DialogContent } from "@/components/ui/dialog"; 
+import { Card } from "@/components/ui/card"; 
+ 
+const App = () => { 
+  const [view, setView] = useState('summary'); 
+  const [currentDate, setCurrentDate] = useState(new Date()); 
+  const [entries, setEntries] = useState([]); 
+  const [formData, setFormData] = useState({ 
+    startTime: '07:30', 
+    endTime: '12:00', 
+    project: null, 
+    workInfo: '', 
+    hasLunch: false 
+  }); 
+  const [showProjectPicker, setShowProjectPicker] = useState(false); 
+ 
+  const projects = [ 
+    { id: 1, name: 'Chantier 1', location: 'Sion' }, 
+    { id: 2, name: 'Chantier 3', location: 'Verbier' } 
+  ]; 
+ 
+  const formatDate = () => { 
+    return currentDate.toDateString() === new Date().toDateString()  
+      ? "Aujourd'hui" 
+      : currentDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }); 
+  }; 
+ 
+  const handleSave = () => { 
+    if (!formData.project) return; 
+     
+    const newEntry = { 
+      id: Date.now(), 
+      date: currentDate.toISOString().split('T')[0], 
+      ...formData 
+    }; 
+     
+    setEntries([...entries, newEntry]); 
+    setView('summary'); 
+    setFormData({ 
+      startTime: '07:30', 
+      endTime: '12:00', 
+      project: null, 
+      workInfo: '', 
+      hasLunch: false 
+    }); 
+  }; 
+ 
+  if (view === 'summary') { 
+    const dailyEntries = entries.filter( 
+      entry => entry.date === currentDate.toISOString().split('T')[0] 
+    ); 
+ 
+    const totalHours = dailyEntries.reduce((total, entry) => { 
+      const [startH, startM] = entry.startTime.split(':').map(Number); 
+      const [endH, endM] = entry.endTime.split(':').map(Number); 
+      return total + (endH - startH) + (endM - startM) / 60; 
+    }, 0); 
+ 
+    return ( 
+      <div className="h-screen bg-gray-50"> 
+        <header className="bg-purple-900 text-white p-4"> 
+          <div className="flex justify-between items-center"> 
+            <div className="flex items-center gap-2"> 
+              <Menu className="h-6 w-6" /> 
+              <h1 className="text-lg">{formatDate()}</h1> 
+            </div> 
+            <Calendar className="h-6 w-6" /> 
+          </div> 
+        </header> 
+ 
+        <main className="p-4 pb-24"> 
+          <div className="space-y-4"> 
+            <div> 
+              <div className="flex justify-between"> 
+                <span>Total du jour</span> 
+                <span>{totalHours.toFixed(2)} / 8:30</span> 
+              </div> 
+              <div className="h-2 bg-gray-200 rounded-full mt-2"> 
+                <div 
+                  className="h-2 bg-green-500 rounded-full transition-all" 
+                  style={{ width: `${Math.min((totalHours / 8.5) * 100, 100)}%` }} 
+                /> 
+              </div> 
+            </div> 
+ 
+            {dailyEntries.map(entry => ( 
+<Card key={entry.id} className="p-4">
+                <div className="flex justify-between items-center"> 
+                  <div> 
+                    <div className="font-medium"> 
+{entry.project.name} ({entry.project.location})
+                    </div> 
+                    <div className="text-sm text-gray-500"> 
+                      {entry.startTime} - {entry.endTime} 
+                    </div> 
+                  </div> 
+                  <div className="flex items-center gap-2"> 
+                    <span className="font-medium"> 
+                      {((endH, endM, startH, startM) => { 
+                        const hours = endH - startH; 
+                        const minutes = endM - startM; 
+                        return `${hours}:${String(Math.abs(minutes)).padStart(2, '0')}`; 
+                      })(...entry.startTime.split(':').concat(entry.endTime.split(':')).map(Number))} 
+                    </span> 
+                    <ChevronRight className="h-4 w-4 text-gray-400" /> 
+                  </div> 
+                </div> 
+              </Card> 
+            ))} 
+ 
+            <Button 
+              className="fixed bottom-20 left-1/2 -translate-x-1/2 rounded-full h-12 w-12 bg-purple-900" 
+              onClick={() => setView('form')} 
+            > 
+              <Plus className="h-6 w-6" /> 
+            </Button> 
+ 
+            <div className="fixed bottom-0 left-0 right-0 bg-purple-900 text-white p-4"> 
+              <div className="flex justify-between"> 
+                <Button  
+                  variant="ghost"  
+                  className="text-white" 
+                  onClick={() => { 
+                    const newDate = new Date(currentDate); 
+                    newDate.setDate(newDate.getDate() - 1); 
+                    setCurrentDate(newDate); 
+                  }} 
+                > 
+                  ← {new Date(currentDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })} 
+                </Button> 
+                <Button  
+                  variant="ghost" 
+                  className="text-white" 
+                  onClick={() => { 
+                    const newDate = new Date(currentDate); 
+                    newDate.setDate(newDate.getDate() + 1); 
+                    setCurrentDate(newDate); 
+                  }} 
+                > 
+                  {new Date(currentDate).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })} → 
+                </Button> 
+              </div> 
+            </div> 
+          </div> 
+        </main> 
+      </div> 
+    ); 
+  } 
+ 
+  return ( 
+    <div className="h-screen bg-white"> 
+      <header className="p-4 border-b flex items-center"> 
+        <Button variant="ghost" onClick={() => setView('summary')}> 
+          <X className="h-5 w-5" /> 
+        </Button> 
+        <h1 className="ml-4 text-lg">{formatDate()}</h1> 
+      </header> 
+ 
+      <main className="p-4 space-y-4"> 
+        <div className="space-y-4"> 
+          <div className="space-y-4"> 
+            <div> 
+              <label className="text-sm text-gray-600 block mb-1">Début</label> 
+              <Input 
+                type="time" 
+                value={formData.startTime} 
+                onChange={e => setFormData({ ...formData, startTime: e.target.value })} 
+              /> 
+            </div> 
+ 
+            <div> 
+              <label className="text-sm text-gray-600 block mb-1">Fin</label> 
+              <Input 
+                type="time" 
+                value={formData.endTime} 
+                onChange={e => setFormData({ ...formData, endTime: e.target.value })} 
+              /> 
+            </div> 
+          </div> 
+ 
+          <div> 
+            <label className="text-sm text-gray-600 block mb-1">Chantier</label> 
+            <div className="flex gap-2"> 
+              <Button 
+                variant="outline" 
+                className="w-full justify-between" 
+                onClick={() => setShowProjectPicker(true)} 
+              > 
+                {formData.project 
+? `${formData.project.name} (${formData.project.location})`
+                  : 'Sélectionner un chantier'} 
+                <ChevronRight className="h-4 w-4" /> 
+              </Button> 
+            </div> 
+          </div> 
+ 
+          {showProjectPicker && ( 
+            <Dialog open onOpenChange={() => setShowProjectPicker(false)}> 
+              <DialogContent className="p-0"> 
+                <div className="p-4 border-b"> 
+                  <h2 className="text-lg text-center">Chantier</h2> 
+                </div> 
+                <div className="max-h-72 overflow-y-auto"> 
+                  {projects.map(project => ( 
+                    <Button 
+key={project.id}
+                      variant="ghost" 
+                      className="w-full justify-start p-4" 
+                      onClick={() => { 
+                        setFormData({ ...formData, project }); 
+                        setShowProjectPicker(false); 
+                      }} 
+                    > 
+{project.name} ({project.location})
+                    </Button> 
+                  ))} 
+                </div> 
+                <div className="flex border-t"> 
+                  <Button 
+                    variant="ghost" 
+                    className="flex-1" 
+                    onClick={() => { 
+                      setFormData({ ...formData, project: null }); 
+                      setShowProjectPicker(false); 
+                    }} 
+                  > 
+                    EFFACER 
+                  </Button> 
+                  <Button 
+                    variant="ghost" 
+                    className="flex-1" 
+                    onClick={() => setShowProjectPicker(false)} 
+                  > 
+                    ANNULER 
+                  </Button> 
+                </div> 
+              </DialogContent> 
+            </Dialog> 
+          )} 
+ 
+          <Card className="p-4"> 
+            <label className="text-sm text-gray-600 block mb-2"> 
+              Infos sur le travail 
+            </label> 
+            <Input 
+              value={formData.workInfo} 
+              onChange={e => setFormData({ ...formData, workInfo: e.target.value })} 
+              placeholder="Ajouter des informations..." 
+            /> 
+          </Card> 
+ 
+          <div className="flex items-center justify-between"> 
+            <span>Repas</span> 
+            <Switch 
+              checked={formData.hasLunch} 
+              onCheckedChange={checked => setFormData({ ...formData, hasLunch: checked })} 
+            /> 
+          </div> 
+        </div> 
+ 
+        <Button 
+          className="w-full bg-purple-900 mt-8" 
+          onClick={handleSave} 
+        > 
+          ENREGISTRER 
+        </Button> 
+      </main> 
+    </div> 
+  ); 
+}; 
+ 
+export default App; 
+ 
